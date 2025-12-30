@@ -1,0 +1,4 @@
+pytwain
+opencv-python
+numpy
+Pillow
