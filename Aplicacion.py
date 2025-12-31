@@ -13,23 +13,36 @@ from names_service import NamesService
 from updater import AutoUpdater
 
 class ScannerApp:
+    """
+    Controlador Principal de la Aplicación.
+    
+    Responsabilidades:
+    - Inicializar la Ventana Principal (Tkinter/CustomTkinter).
+    - Orquestar la comunicación entre la Lógica de Escaneo (ScannerLogic),
+      el Gestor de Sesión (SessionManager) y los Paneles de UI.
+    - Manejar eventos de usuario (botones, teclas).
+    - Gestionar el ciclo de vida del escaneo (inicio, parada, polling).
+    """
     def __init__(self, root):
         self.root = root
         self.root.title("Sistema de Corrección Automática - Escáner TWAIN")
         self.root.geometry("1100x750")
         
+        # Configuración de apariencia de CustomTkinter
         ctk.set_appearance_mode("Light") 
         ctk.set_default_color_theme("blue")
 
-        self.logic = ScannerLogic()
-        self.session = SessionManager()
-        self.names_service = NamesService()
+        # Inicialización de subsistemas
+        self.logic = ScannerLogic()       # Lógica base TWAIN y procesamiento de imagen
+        self.session = SessionManager()   # Manejo de datos y persistencia
+        self.names_service = NamesService() # Servicio de nombres de alumnos
         
         self.current_scan_index = -1
         
+        # Construcción de la interfaz gráfica
         self._setup_ui()
         
-        # Check updates after 1 second
+        # Iniciar verificación de actualizaciones en segundo plano después de 1 segundo
         self.root.after(1000, self._check_updates)
 
     def _setup_ui(self):
@@ -201,6 +214,8 @@ class ScannerApp:
         
         try:
             # Iniciamos escaneo (Modeless, Main Thread)
+            # Modeless permite que la GUI no se congele esperando que el driver termine todo el lote.
+            # En su lugar, el driver queda activo y nosotros le preguntamos periódicamente si hay imágenes.
             self.scan_source = self.logic.start_scanning(self.root.winfo_id(), show_ui=show_ui)
             
             if not self.scan_source:
@@ -213,10 +228,14 @@ class ScannerApp:
             self.side_bar.btn_scan.configure(text="Detener Escaneo")
             
             # Iniciamos Loop de Polling con retraso inicial
+            # Este loop llamará a _poll_scan_status repetidamente para ver si llegó una hoja
             self.root.after(1000, self._poll_scan_status)
             
         except Exception as e:
-            messagebox.showerror("Error de Escaneo", str(e))
+            msg = str(e)
+            if not msg.strip():
+                msg = "El driver del escáner reportó un fallo pero no entregó detalles.\nVerifique que el dispositivo esté encendido y conectado."
+            messagebox.showerror("Error de Escaneo", msg)
 
     def detener_escaneo(self):
         self._finish_scanning()
@@ -503,7 +522,7 @@ class ScannerApp:
 
     def _check_updates(self):
         try:
-            updater = AutoUpdater("1.2", "fmoralescpdv", "escanerpdv")
+            updater = AutoUpdater("1.2.1", "fmoralescpdv", "escanerpdv")
             updater.check_for_updates(silent=True)
         except: pass
 
