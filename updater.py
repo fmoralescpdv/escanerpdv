@@ -24,23 +24,16 @@ class AutoUpdater:
             response.raise_for_status()
             
             data = response.json()
-            data = response.json()
             tag_name = data.get("tag_name", "").strip()
             release_name = data.get("name", "").strip()
 
-            # Estrategia:
-            # 1. Si el tag es normal (ej: v1.1), usar eso.
-            # 2. Si el usuario usa el tag "latest", buscar la versión en el Título del Release (ej: "v1.2 - Mejoras")
+            # Lógica Simplificada:
+            # Confiamos en que el tag de GitHub es una versión válida (ej: "v1.3" o "1.3")
+            # El endpoint /releases/latest ya nos trae la última release válida.
             
             remote_ver = tag_name.lower().lstrip("v")
             
-            if "latest" in remote_ver:
-                # Buscar patrón numérico X.X o X.X.X en el título
-                match = re.search(r'v?(\d+(\.\d+)+)', release_name)
-                if match:
-                    remote_ver = match.group(1)
-            
-            # Comparación robusta
+            # Comparación robusta (1.2.0 vs 1.2)
             if self._is_newer(remote_ver, self.current_version):
                 download_url = self._get_exe_url(data)
                 if not download_url:
@@ -88,7 +81,7 @@ class AutoUpdater:
     def perform_update(self, url):
         """Descarga y ejecuta el instalador"""
         try:
-            temp_path = os.path.join(os.environ.get('TEMP', '.'), "EscanerUpdate.exe")
+            temp_path = os.path.join(os.environ.get('TEMP', '.'), "EscanerPDVUpdate.exe")
             
             # Descargar
             response = requests.get(url, stream=True)

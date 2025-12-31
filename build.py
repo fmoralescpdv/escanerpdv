@@ -10,13 +10,12 @@ print(f"Ruta CustomTkinter detectada: {ctk_path}")
 # Definir argumentos para PyInstaller
 args = [
     'Aplicacion.py',                # Archivo principal
-    '--name=EscanerPro',            # Nombre del ejecutable
+    '--name=EscanerPDV',            # Nombre del ejecutable
     '--onefile',                    # Crear un solo archivo .exe (portátil)
     '--windowed',                   # No mostrar consola negra (GUI mode)
     '--clean',                      # Limpiar caché previo
     f'--add-data={ctk_path};customtkinter', # Incluir carpeta de estilos de CTK
-    # Añade aquí otros archivos de datos si los necesitas, ej:
-    # '--add-data=mi_icono.ico;.' 
+    '--icon=icon.ico'                # Icono del ejecutable
 ]
 
 print("Iniciando compilación... esto puede tardar unos minutos.")

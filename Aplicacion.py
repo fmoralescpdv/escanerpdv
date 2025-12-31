@@ -503,7 +503,7 @@ class ScannerApp:
 
     def _check_updates(self):
         try:
-            updater = AutoUpdater("1.1", "fmoralescpdv", "escanerpdv")
+            updater = AutoUpdater("1.2", "fmoralescpdv", "escanerpdv")
             updater.check_for_updates(silent=True)
         except: pass
 
