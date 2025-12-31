@@ -10,6 +10,14 @@ AREA_MINIMA = 100
 AREA_MAXIMA = 3000
 
 class ScannerLogic:
+    """
+    Lógica de Negocio del Escáner y Procesamiento de Imagen.
+    
+    Encapsula:
+    1. Comunicación con TWAIN (Iniciar, transferir imagenes).
+    2. Procesamiento de Imagen (Computer Vision) para OMR (Lectura óptica de marcas).
+    3. Decodificación de RUT y Respuestas basada en geometría.
+    """
     def __init__(self):
         self.current_source_name = None
 
@@ -18,6 +26,10 @@ class ScannerLogic:
             sm = twain.SourceManager(window_id)
             return sm.GetSourceList()
         except Exception as e:
+            # Capturar errores comunes de TWAIN (falta de DSM, drivers, etc)
+            err_msg = str(e).lower()
+            if "dll" in err_msg or "module" in err_msg or "twain" in err_msg:
+                 raise Exception("No se encontró escaner en el equipo, revise la configuración o instalación de los drivers de su escaner.")
             raise e
 
     def set_source(self, source_name):
@@ -39,6 +51,9 @@ class ScannerLogic:
             ss.RequestAcquire(1 if show_ui else 0, 0)
             return ss
         except Exception as e:
+            err_msg = str(e).lower()
+            if "dll" in err_msg or "module" in err_msg or "twain" in err_msg:
+                 raise Exception("No se encontró escaner en el equipo, revise la configuración o instalación de los drivers de su escaner.")
             raise e
 
     def close_source(self, ss):
@@ -90,6 +105,16 @@ class ScannerLogic:
     def process_image(self, image_path):
         """
         Procesa la imagen midiendo dinámicamente el tamaño promedio de las burbujas para filtrar texto.
+        
+        Algoritmo OMR (Optical Mark Recognition):
+        1. Preprocesamiento: Conversión a Grises -> Umbralización (Binarización) -> Cierre Morfológico.
+        2. Detección de Contornos: Buscar formas cerradas en la imagen.
+        3. Filtrado de Candidatos:
+           - Filtro Geométrico: Por Área (min/max), Aspect Ratio (cuadrado/circulo) y Solidez.
+           - Filtro Adaptativo: Calcula el tamaño mediano de los candidatos y descarta ruido (letras pequeñas).
+        4. Análisis de Densidad: Verifica si el candidato tiene suficientes pixeles negros (marcado).
+        5. Clasificación Espacial: Separa marcas de RUT (arriba) de marcas de Respuestas (abajo).
+        6. Decodificación: Reconstrucción de grillas y lectura de valores.
         """
         if not os.path.exists(image_path):
             return "", [], None

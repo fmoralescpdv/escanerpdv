@@ -4,6 +4,7 @@ from PIL import Image, ImageTk
 import cv2
 
 class ToolTip:
+    """Widget auxiliar para mostrar texto flotante al pasar el mouse."""
     def __init__(self, widget, text):
         self.widget = widget
         self.text = text
@@ -29,6 +30,10 @@ class ToolTip:
         if tw: tw.destroy()
 
 class TopBar(ctk.CTkFrame):
+    """
+    Barra Superior de Herramientas.
+    Contiene acciones globales: Guardar/Cargar, Revisar reporte, Recargar nombres y Configuración.
+    """
     def __init__(self, parent, callbacks):
         super().__init__(parent, fg_color="transparent") 
         self.callbacks = callbacks 
@@ -45,11 +50,11 @@ class TopBar(ctk.CTkFrame):
         self.btn_load = ctk.CTkButton(self, text="Cargar Sesión", command=self.callbacks.get('load'), width=130, font=btn_font)
         self.btn_load.pack(side=tk.LEFT, padx=(0, 5))
         
-        self.btn_review = ctk.CTkButton(self, text="Revisar pruebas", command=self.callbacks.get('review'), width=130, font=btn_font)
-        self.btn_review.pack(side=tk.LEFT, padx=(0, 5))
-        
         self.btn_reload_names = ctk.CTkButton(self, text="Actualizar Nombres", command=self.callbacks.get('reload_names'), width=160, font=btn_font)
         self.btn_reload_names.pack(side=tk.LEFT, padx=(0, 5))
+
+        self.btn_review = ctk.CTkButton(self, text="Revisar pruebas", command=self.callbacks.get('review'), width=130, font=btn_font, fg_color="#E67E22", hover_color="#D35400")
+        self.btn_review.pack(side=tk.LEFT, padx=(0, 5))
 
         self.btn_options = ctk.CTkButton(self, text="Opciones ▼", command=self.show_options_menu, width=120, font=("Segoe UI", 12, "bold"))
         self.btn_options.pack(side=tk.RIGHT, padx=5)
@@ -72,6 +77,10 @@ class TopBar(ctk.CTkFrame):
         except: pass
 
 class SideBar(ctk.CTkFrame):
+    """
+    Panel Lateral Izquierdo.
+    Muestra la lista de escaneos, estadísticas simples y controles de escaneo/eliminación.
+    """
     def __init__(self, parent, callbacks):
         super().__init__(parent, width=200, corner_radius=10)
         self.callbacks = callbacks 
@@ -140,6 +149,11 @@ class SideBar(ctk.CTkFrame):
         except: pass
 
 class AnswerPanel(ctk.CTkFrame):
+    """
+    Panel Central.
+    Muestra los campos editables para el RUT, Nombre y la grilla de Respuestas (1-90).
+    Captura eventos de teclado y los delega al controlador.
+    """
     def __init__(self, parent, callbacks):
         super().__init__(parent, corner_radius=10)
         self.callbacks = callbacks 
@@ -269,6 +283,10 @@ class AnswerPanel(ctk.CTkFrame):
              f.configure(fg_color="#a8e6cf")
 
 class ImagePanel(ctk.CTkFrame):
+    """
+    Panel Derecho (Visor).
+    Muestra la imagen escaneada procesada con marcas visuales superpuestas.
+    """
     def __init__(self, parent):
         super().__init__(parent, corner_radius=10)
         self._init_ui()
