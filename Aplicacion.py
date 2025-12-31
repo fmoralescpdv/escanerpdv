@@ -10,6 +10,7 @@ from scanner_logic import ScannerLogic
 from session_manager import SessionManager
 from ui_panels import TopBar, SideBar, AnswerPanel, ImagePanel
 from names_service import NamesService
+from updater import AutoUpdater
 
 class ScannerApp:
     def __init__(self, root):
@@ -27,6 +28,9 @@ class ScannerApp:
         self.current_scan_index = -1
         
         self._setup_ui()
+        
+        # Check updates after 1 second
+        self.root.after(1000, self._check_updates)
 
     def _setup_ui(self):
         # Frame Principal CTK
@@ -496,6 +500,13 @@ class ScannerApp:
             self.top_bar.set_toggle_text("Ocultar Visor")
             if self.image_panel.current_vis_img is not None:
                  self.image_panel.display_image(self.image_panel.current_vis_img)
+
+    def _check_updates(self):
+        try:
+            updater = AutoUpdater("1.1", "fmoralescpdv", "escanerpdv")
+            updater.check_for_updates(silent=True)
+        except: pass
+
 
 
 

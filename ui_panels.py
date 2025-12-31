@@ -155,7 +155,7 @@ class AnswerPanel(ctk.CTkFrame):
         
         ctk.CTkLabel(frame_rut, text="RUT Alumno", font=("Segoe UI", 12, "bold"), anchor="w").pack(fill=tk.X)
         self.rut_var = tk.StringVar()
-        self.entry_rut = ctk.CTkEntry(frame_rut, textvariable=self.rut_var, font=("Courier", 16, "bold"), justify="center", height=35)
+        self.entry_rut = ctk.CTkEntry(frame_rut, textvariable=self.rut_var, font=("Segoe UI", 16, "bold"), justify="center", height=35)
         self.entry_rut.pack(fill=tk.X, pady=2)
         self.entry_rut.bind('<KeyRelease>', self.callbacks.get('on_rut_change'))
 
