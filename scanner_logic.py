@@ -5,7 +5,7 @@ import os
 import time
 
 # --- Configuración ---
-UMBRAL_NEGRO = 150 
+UMBRAL_NEGRO = 165 # Ajustado para lapiz grafito (Gris medio)
 AREA_MINIMA = 100
 AREA_MAXIMA = 3000
 
@@ -124,8 +124,29 @@ class ScannerLogic:
             return "", [], None
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # [MEJORA PENCIL] Normalizar brillo/contraste
+        # Estira el histograma para que el negro mas negro sea 0 y el blanco mas blanco sea 255.
+        # Esto hace que el lapiz gris se oscurezca más relativo al papel blanco.
+        gray = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX)
+        
         _, thresh = cv2.threshold(gray, UMBRAL_NEGRO, 255, cv2.THRESH_BINARY_INV)
         
+        # --- Eliminacion de Ruido (Lineas Verticales de Escaner) ---
+        # 1. Definir kernel vertical (1px ancho, 40px alto). Ajustar alto si es necesario.
+        # Esto aisla estructuras que son puramente verticales y largas.
+        vertical_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 40))
+        
+        # 2. Operacion Morphological OPEN (Erosion -> Dilatacion)
+        # Esto elimina todo lo que NO sea una linea vertical larga.
+        detected_lines = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, vertical_kernel)
+        
+        # 3. Restar las lineas detectadas de la imagen original binaria.
+        # cv2.subtract maneja la saturacion (evita negativos, clipea a 0).
+        thresh = cv2.subtract(thresh, detected_lines)
+        # -----------------------------------------------------------
+        
+        # Morphological Closing
         # Morphological Closing
         kernel = np.ones((3,3), np.uint8)
         thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
@@ -148,13 +169,13 @@ class ScannerLogic:
                 x, y, w, h = cv2.boundingRect(cnt)
                 aspect_ratio = float(w)/h
                 
-                # Geometría cuadrada/circular
-                if 0.7 < aspect_ratio < 1.3:
+                # Geometría cuadrada/circular (Relajada para permitir marcas imperfectas)
+                if 0.6 < aspect_ratio < 1.6:
                     rect_area = w * h
                     extent = float(area) / rect_area
                     
-                    # Solidez razonable
-                    if extent > 0.40:
+                    # Solidez razonable (Relajada para permitir formas irregulares)
+                    if extent > 0.35:
                        candidates.append({
                            'cnt': cnt,
                            'area': area,
@@ -180,14 +201,38 @@ class ScannerLogic:
             x, y, w, h = c['rect']
             area = c['area']
             
-            roi = thresh[y:y+h, x:x+w]
-            density = cv2.countNonZero(roi) / (w * h)
+            # --- MEJORA: ROI Interno (Inner Crop) ---
+            # Evita contar el borde impreso de la burbuja como tinta.
+            # Recortamos un 25% de margenes para analizar solo el centro.
+            margin_x = int(w * 0.25)
+            margin_y = int(h * 0.25)
             
-            # Umbral de marcado
-            is_marked = density > 0.32 
+            # Sanity check para evitar ROI vacio
+            if margin_x < 1: margin_x = 1
+            if margin_y < 1: margin_y = 1
+            
+            inner_x = x + margin_x
+            inner_y = y + margin_y
+            inner_w = w - (2 * margin_x)
+            inner_h = h - (2 * margin_y)
+            
+            if inner_w <= 0 or inner_h <= 0:
+                # Fallback por si es muy chico
+                inner_x, inner_y, inner_w, inner_h = x, y, w, h
+                
+            roi = thresh[inner_y:inner_y+inner_h, inner_x:inner_x+inner_w]
+            density = cv2.countNonZero(roi) / (inner_w * inner_h)
+            
+            # Umbral de marcado ajustado para "relleno solido"
+            # Al quitar bordes, una marca real deberia ser casi 100% negra en el centro.
+            # Usamos 0.50 para ser seguros (vs 0.32 anterior con bordes)
+            is_marked = density > 0.50 
             
             color = (0, 255, 0) if is_marked else (0, 0, 255)
             cv2.rectangle(vis_img, (x, y), (x + w, y + h), color, 2)
+            # Dibujar ROI interno visualmente para debug (azul)
+            # cv2.rectangle(vis_img, (inner_x, inner_y), (inner_x + inner_w, inner_y + inner_h), (255, 0, 0), 1)
+
             cx, cy = x + w // 2, y + h // 2
 
             mark_data = {'pos': (cx, cy), 'area': area, 'density': density, 'marked': is_marked}

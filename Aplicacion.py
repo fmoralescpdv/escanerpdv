@@ -25,8 +25,13 @@ class ScannerApp:
     """
     def __init__(self, root):
         self.root = root
-        self.root.title("Sistema de Corrección Automática - Escáner TWAIN")
+
+        self.root.title("Escaner PDV")
         self.root.geometry("1100x750")
+        try:
+            self.root.iconbitmap("icon.ico")
+        except Exception as e:
+            print(f"No se pudo cargar icono: {e}")
         
         # Configuración de apariencia de CustomTkinter
         ctk.set_appearance_mode("Light") 
@@ -522,7 +527,7 @@ class ScannerApp:
 
     def _check_updates(self):
         try:
-            updater = AutoUpdater("1.2.1", "fmoralescpdv", "escanerpdv")
+            updater = AutoUpdater("1.2.2", "fmoralescpdv", "escanerpdv")
             updater.check_for_updates(silent=True)
         except: pass
 

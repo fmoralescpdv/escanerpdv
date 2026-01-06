@@ -2,7 +2,8 @@ import requests
 import webbrowser
 import os
 import sys
-from tkinter import messagebox
+import tkinter as tk
+from tkinter import messagebox, ttk
 import subprocess
 import re
 
@@ -79,20 +80,71 @@ class AutoUpdater:
         return None
 
     def perform_update(self, url):
-        """Descarga y ejecuta el instalador"""
+        """Descarga con Barra de Progreso y ejecuta el instalador"""
         try:
+            # Crear ventana de progreso
+            p_win = tk.Toplevel()
+            p_win.title("Actualizando Escaner PDV")
+            p_win.geometry("350x150")
+            p_win.resizable(False, False)
+            
+            # Centrar ventana
+            p_win.update_idletasks()
+            w = p_win.winfo_width()
+            h = p_win.winfo_height()
+            x = (p_win.winfo_screenwidth() // 2) - (w // 2)
+            y = (p_win.winfo_screenheight() // 2) - (h // 2)
+            p_win.geometry(f'+{x}+{y}')
+            
+            lbl = tk.Label(p_win, text="Iniciando descarga...", font=("Arial", 10))
+            lbl.pack(pady=20)
+            
+            pbar = ttk.Progressbar(p_win, orient="horizontal", length=300, mode="determinate")
+            pbar.pack(pady=5)
+            
+            p_win.update()
+            
             temp_path = os.path.join(os.environ.get('TEMP', '.'), "EscanerPDVUpdate.exe")
             
-            # Descargar
+            # Descargar con stream
             response = requests.get(url, stream=True)
+            total_size = int(response.headers.get('content-length', 0))
+            downloaded = 0
+            
+            if total_size == 0:
+                pbar.mode = 'indeterminate'
+                pbar.start()
+            
             with open(temp_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        
+                        if total_size > 0:
+                            perc = (downloaded / total_size) * 100
+                            pbar['value'] = perc
+                            lbl.config(text=f"Descargando: {int(perc)}%")
+                        else:
+                            lbl.config(text=f"Descargado: {downloaded/1024:.1f} KB")
+                        
+                        p_win.update()
+            
+            p_win.destroy()
             
             # Ejecutar instalador y cerrar esta app
             messagebox.showinfo("Instalando", "La aplicación se cerrará para iniciar la actualización.")
-            subprocess.Popen([temp_path]) # Ejecutar modo normal para que el usuario pueda ver errores o terminar la instalación
+            
+            # [FIX] Usar os.startfile para que Windows maneje la ejecución 
+            # Esto evita que el instalador herede el entorno de PyInstaller (DLL Hell)
+            try:
+                os.startfile(temp_path)
+            except AttributeError:
+                subprocess.Popen([temp_path], shell=True)
+                
             os._exit(0)
             
         except Exception as e:
+            try: p_win.destroy() 
+            except: pass
             messagebox.showerror("Error Actualización", f"Fallo en la descarga:\n{e}")
